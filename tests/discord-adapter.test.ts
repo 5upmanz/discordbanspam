@@ -52,6 +52,11 @@ it('checks scope, channel type, permissions, owner and hierarchy', async () => {
   f.self.permissions.has.mockReturnValue(false);
   await expect(f.api.canBan('g', 'u')).rejects.toMatchObject({ code: '50013' });
 });
+it.each([PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks, PermissionFlagsBits.ReadMessageHistory])('requires panel channel permission %s before enabling intake', async permission => {
+  const f = fixture();
+  f.channel.permissionsFor.mockReturnValue({ has: vi.fn().mockImplementation(bit => bit !== permission) });
+  await expect(f.api.preflight('g', 'c')).rejects.toMatchObject({ code: '50013' });
+});
 it('requires ViewChannel and propagates Unknown Member without banning', async () => {
   const f = fixture();
   f.channel.permissionsFor.mockReturnValue({ has: vi.fn().mockReturnValue(false) });

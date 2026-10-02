@@ -51,6 +51,7 @@ export interface Jobs {
   change(id: string, expected: State, patch: JobPatch, now: number): Job;
   nextDue(now: number): Job | null;
   recoverable(): Job[];
+  successfulCount(): number;
   overdue(now: number): Job[];
 }
 

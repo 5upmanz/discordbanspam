@@ -49,10 +49,14 @@ export function createJobs(db: Database.Database): Jobs {
     const values = keys.map(key => patch[key] as string | number | null);
     const result = db.prepare(`UPDATE jobs SET ${assignments.join(', ')} WHERE id = ? AND state = ?`).run(...values, now, id, expected);
     if (result.changes !== 1) throw new Error('Unexpected job state');
+    if (expected === 'unbanning' && target === 'completed') {
+      db.prepare('UPDATE status_panel SET successfulCount = successfulCount + 1 WHERE singleton = 1').run();
+    }
     return get(id);
   });
   return {
     accept, get, change,
+    successfulCount: () => (db.prepare('SELECT successfulCount FROM status_panel WHERE singleton = 1').get() as { successfulCount: number }).successfulCount,
     nextDue: now => (db.prepare(`SELECT * FROM jobs WHERE state IN ('queued','banning','unbanning') AND nextAttemptAt <= ? ORDER BY ${priority} LIMIT 1`).get(now) as Job | undefined) ?? null,
     recoverable: () => db.prepare(`SELECT * FROM jobs WHERE state IN ('queued','banning','unbanning') ORDER BY ${priority}`).all() as Job[],
     overdue: now => db.prepare("SELECT * FROM jobs WHERE state IN ('banning','unbanning','manual_review') AND banStartedAt IS NOT NULL AND banStartedAt <= ? AND (lastAlertAt IS NULL OR lastAlertAt <= ?)").all(now - 60000, now - 300000) as Job[],

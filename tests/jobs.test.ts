@@ -36,7 +36,7 @@ it('enforces database pragmas and bound scope, and returns fresh snapshots', () 
   try {
     expect(db.pragma('foreign_keys', { simple: true })).toBe(1);
     expect(db.pragma('synchronous', { simple: true })).toBe(2);
-    expect(db.pragma('user_version', { simple: true })).toBe(1);
+    expect(db.pragma('user_version', { simple: true })).toBe(2);
     const jobs = createJobs(db), job = jobs.accept(trigger, 1).job;
     expect(() => jobs.accept({ ...trigger, guildId: 'other', messageId: 'new' }, 2)).toThrow(/scope/i);
     job.state = 'completed';

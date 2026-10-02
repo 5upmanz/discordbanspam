@@ -1,4 +1,5 @@
 import type { Config } from './config.js';
+import type { StatusPanel } from './status-panel.js';
 import type { Clock, DiscordPort, Jobs, Log } from './contracts.js';
 import { createTrapHandler, type MessageEnvelope } from './trap-handler.js';
 import { createWorker } from './softban-worker.js';
@@ -16,7 +17,7 @@ export interface ClientPort {
 export interface App { start(): Promise<void>; stop(): Promise<boolean> }
 export function createApp(deps: {
   config: Config; client: ClientPort; api: DiscordPort; jobs: Jobs; clock: Clock; log: Log;
-  closeDatabase: () => void; exit: (code: number) => void;
+  closeDatabase: () => void; exit: (code: number) => void; statusPanel?: StatusPanel;
 }): App {
   const { client, log } = deps;
   let handler: ReturnType<typeof createTrapHandler> | undefined;
@@ -48,6 +49,7 @@ export function createApp(deps: {
       throw error;
     }
     if (stopping || current !== epoch) return;
+    deps.statusPanel?.start();
     handler!.setEnabled(true); log.emit('info', 'ready'); resolveBoot();
   }
   async function stop(): Promise<boolean> {
@@ -55,7 +57,8 @@ export function createApp(deps: {
     stopping = true; ++epoch; handler?.setEnabled(false);
     rejectBoot(new Error('Application stopped'));
     stopPromise = (async () => {
-      const drained = await scheduler.stop(15000);
+      const [workerDrained, panelDrained = true] = await Promise.all([scheduler.stop(15000), deps.statusPanel?.stop(15000)]);
+      const drained = workerDrained && panelDrained;
       if (!drained) log.emit('critical', 'shutdown_timeout', { errorCode: 'DRAIN_TIMEOUT' });
       try { await client.destroy(); }
       finally {

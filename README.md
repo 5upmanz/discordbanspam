@@ -12,6 +12,9 @@ Discord trap-channel softban bot. Node.js 24, TypeScript, discord.js 14 and loca
 - Threads, other channels/guilds and DMs are excluded. No offline history scan.
 - Softban removes the member from the guild. They may rejoin using an invite; this bot does not invite them back.
 - One active job per guild/user; every accepted message ID is recorded, including coalesced messages. A new message after completion can create a new job.
+- On readiness, publishes a GIF Embed in the trap channel with a disabled `โดนไปแล้ว N ครั้ง` counter button. The bot's own messages never trigger moderation.
+- Counts automatically completed softbans, not raw ban requests, unique members, failures or manual-review resolutions. Count and panel message ID persist in SQLite. Checks for count changes every five seconds, edits the same message, and checks for deletion once per minute. Deleted panels are recreated; permission/network failures are logged and retried without blocking moderation/recovery.
+- A send timeout or a crash between sending a new panel and saving its ID can leave a duplicate panel. Remove stale copies manually; Discord message creation and local SQLite cannot be committed atomically.
 
 ## Hard limits
 
@@ -25,9 +28,9 @@ Gateway outages can miss events. API latency and rate limits prevent a latency g
 
 - Node.js **24.x** (`node --version`), npm.
 - Official Discord bot application and token. No self-bot/user token.
-- `BanMembers` in the guild and `ViewChannel` in the trap channel.
+- `BanMembers` in the guild; `ViewChannel`, `SendMessages`, `EmbedLinks` and `ReadMessageHistory` in the trap channel.
 - Bot's highest role above intended target roles.
-- Only `Guilds` and `GuildMessages` intents. No `MessageContent` or `GuildMembers` privileged toggle, Administrator, ManageMessages, SendMessages or ViewAuditLog requirement.
+- Only `Guilds` and `GuildMessages` intents. No `MessageContent` or `GuildMembers` privileged toggle, Administrator, ManageMessages or ViewAuditLog requirement.
 - Persistent **local disk**, one process per configuration. No replicas/network shares. Validation rejects obvious network paths, but a mapped network drive is an operator responsibility.
 - `better-sqlite3` requires a compatible native binary. The locked version ships prebuilt binaries, including Windows x64. Project `.npmrc` disables dependency lifecycle scripts: npm 11 attempted an unnecessary implicit `node-gyp rebuild` despite this package's shipped binaries. Explicit `npm run build`/`npm test` commands still run. If no shipped binary supports your platform, install Python and Visual Studio C++ Build Tools (Windows), then deliberately run `npm rebuild better-sqlite3 --ignore-scripts=false` and re-run verification. Do not silently change Node versions.
 - Recheck this install policy when updating dependencies: a new dependency may genuinely require a lifecycle build. Do not suppress that failure and claim readiness.
@@ -73,11 +76,13 @@ exit $LASTEXITCODE
 
 Task action for this launcher: absolute `powershell.exe` path, arguments `-NoProfile -File "C:\path\to\banbot\run-banbot.ps1"`, Start in = project root. Review/sign the script according to local execution policy; do not bypass policy blindly.
 
-Sleep, shutdown and lost connectivity suspend monitoring. Logs are the only alert channel in this version; no messages are sent to the trap room. With `LOG_LEVEL=critical`, error-level manual-review/unresolved alerts are filtered, so `info`/`warn`/`error` is preferred for operations.
+Sleep, shutdown and lost connectivity suspend monitoring. The trap-room Embed is a counter panel, not an alert channel or live connectivity guarantee. Logs remain the only failure-alert channel. With `LOG_LEVEL=critical`, error-level manual-review/unresolved alerts are filtered, so `info`/`warn`/`error` is preferred for operations.
 
 ## Persistence and backups
 
 SQLite uses WAL, `synchronous=FULL`, foreign keys, and transactional acceptance/state changes. A database binds permanently to one guild/channel scope; a mismatched configuration fails before login.
+
+Schema v1 is upgraded transactionally to v2 at startup, preserving jobs/dedup and seeding the counter from completed jobs with a ban start and no error. Back up before upgrading. The previous v1 binary cannot open a v2 database; do not downgrade against the upgraded DB. Each new successful completion increments the counter in the same transaction as its state change.
 
 Do not delete the DB to clear errors. Dedup history grows without automatic pruning. Monitor disk usage. Disk-full/write failures stop new intake and bans. After an owned ban, storage failure attempts a fresh ownership check and emergency unban before shutdown.
 
@@ -151,5 +156,7 @@ With explicit permission and a disposable guild/member:
 - [ ] Test hierarchy failure with a disposable role; verify logged failure without unban.
 - [ ] Test another bot only with a disposable bot, not production integrations.
 - [ ] Check JSON job identities/results and external alert forwarding.
+- [ ] Verify the trap-room GIF Embed and disabled `โดนไปแล้ว N ครั้ง` button. A completed softban increments once; failures/pending/manual-review jobs do not increment. Restart and confirm the same message and count survive. Delete the panel and confirm recreation within one minute.
+- [ ] Check channel overrides for `SendMessages`, `EmbedLinks` and `ReadMessageHistory`; missing permissions prevent new intake, but owned-ban recovery still takes priority.
 
 Design and implementation recipe: `docs/superpowers/specs/2026-09-13-discord-trap-softban-design.md` and `docs/superpowers/plans/2026-09-13-discord-trap-softban.md`.

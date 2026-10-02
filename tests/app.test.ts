@@ -1,7 +1,32 @@
 import { expect, it, vi } from 'vitest';
 import { createApp, type ClientPort } from '../src/app.js';
+import type { StatusPanel } from '../src/status-panel.js';
 import type { MessageEnvelope } from '../src/trap-handler.js';
 import { fixture } from './helpers.js';
+
+it('starts the panel only after preflight and drains it before closing the database', async () => {
+  let release!: () => void, active = false;
+  const panel: StatusPanel = {
+    start() { active = true; },
+    stop: () => new Promise<boolean>(resolve => { release = () => { active = false; resolve(true); }; }),
+  };
+  const { f, app, close } = setup(panel);
+  try {
+    await app.start(); expect(active).toBe(true);
+    const stopping = app.stop(); await Promise.resolve();
+    expect(close).not.toHaveBeenCalled();
+    release(); await stopping;
+    expect(active).toBe(false); expect(close).toHaveBeenCalledOnce();
+  } finally { release?.(); await app.stop(); f.close(); }
+});
+it('keeps the database open when the panel cannot drain before shutdown', async () => {
+  const panel: StatusPanel = { start() {}, stop: async () => false };
+  const { f, app, close, exit } = setup(panel);
+  try {
+    await app.start(); expect(await app.stop()).toBe(false);
+    expect(close).not.toHaveBeenCalled(); expect(exit).toHaveBeenCalledWith(1);
+  } finally { await app.stop(); f.close(); }
+});
 function fakeClient() {
   let ready = () => {}, message = (_m: MessageEnvelope) => {}, connection = (_v: boolean) => {}, error = (_e: unknown) => {};
   const port: ClientPort = {
@@ -11,9 +36,9 @@ function fakeClient() {
   return { port, send: (m: MessageEnvelope) => message(m), connect: (v: boolean) => connection(v), ready: () => ready(), fail: (e: unknown) => error(e) };
 }
 const message: MessageEnvelope = { id: 'm', guildId: 'g', channelId: 'c', authorId: 'u', webhookId: null, system: false };
-function setup() {
+function setup(statusPanel?: StatusPanel) {
   const f = fixture(), client = fakeClient(), close = vi.fn(), exit = vi.fn();
-  const app = createApp({ config: { token: 'test', guildId: 'g', trapChannelId: 'c', databasePath: 'unused', logLevel: 'info' }, client: client.port, api: f.api, jobs: f.jobs, clock: f.clock, log: f.log, closeDatabase: close, exit });
+  const app = createApp({ config: { token: 'test', guildId: 'g', trapChannelId: 'c', databasePath: 'unused', logLevel: 'info' }, client: client.port, api: f.api, jobs: f.jobs, clock: f.clock, log: f.log, closeDatabase: close, exit, statusPanel });
   return { f, client, close, exit, app };
 }
 it('gates pending preflight then processes messages, stops idempotently', async () => {

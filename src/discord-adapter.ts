@@ -28,7 +28,9 @@ export function createDiscordAdapter(client: Client): DiscordPort {
       if (channel.type !== ChannelType.GuildText) throw new ApiFailure('permanent', 'CHANNEL_TYPE');
       if (!client.user) throw new ApiFailure('permanent', 'NOT_READY');
       const self = await guild.members.fetch({ user: client.user.id, force: true });
-      if (!self.permissions.has(PermissionFlagsBits.BanMembers) || !channel.permissionsFor(self)?.has(PermissionFlagsBits.ViewChannel)) throw new ApiFailure('permanent', '50013');
+      const permissions = channel.permissionsFor(self);
+      const required = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks, PermissionFlagsBits.ReadMessageHistory];
+      if (!self.permissions.has(PermissionFlagsBits.BanMembers) || !required.every(bit => permissions?.has(bit))) throw new ApiFailure('permanent', '50013');
     }),
     canBan: (guildId, userId) => invoke(async () => {
       const guild = await client.guilds.fetch(guildId);

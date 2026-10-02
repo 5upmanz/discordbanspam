@@ -7,7 +7,7 @@ export function openDatabase(path: string, scope: { guildId: string; channelId: 
   const db = new Database(path);
   try {
     const version = db.pragma('user_version', { simple: true });
-    if (version !== 0 && version !== 1) throw new Error('Unsupported database schema version');
+    if (version !== 0 && version !== 1 && version !== 2) throw new Error('Unsupported database schema version');
     db.pragma('journal_mode = WAL');
     db.pragma('synchronous = FULL');
     db.pragma('foreign_keys = ON');
@@ -30,6 +30,14 @@ export function openDatabase(path: string, scope: { guildId: string; channelId: 
           PRAGMA user_version = 1;
         `);
         db.prepare('INSERT INTO scope VALUES (1, ?, ?)').run(scope.guildId, scope.channelId);
+      }
+      if (version !== 2) {
+        db.exec(`
+          CREATE TABLE status_panel (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), messageId TEXT, successfulCount INTEGER NOT NULL DEFAULT 0);
+          INSERT INTO status_panel (singleton, successfulCount)
+            SELECT 1, COUNT(*) FROM jobs WHERE state = 'completed' AND lastError IS NULL AND banStartedAt IS NOT NULL;
+          PRAGMA user_version = 2;
+        `);
       }
       const stored = db.prepare('SELECT guildId, channelId FROM scope WHERE singleton = 1').get() as typeof scope | undefined;
       if (!stored || stored.guildId !== scope.guildId || stored.channelId !== scope.channelId) throw new Error('Database scope mismatch');
