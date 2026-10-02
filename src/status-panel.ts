@@ -7,7 +7,7 @@ const gifUrl = 'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdndubTU3Njhxen
 export function statusPayload(count: number) {
   return {
     embeds: [new EmbedBuilder().setColor(0xe74c3c).setTitle('ห้องกับดัก • Softban')
-      .setDescription('ส่งข้อความในห้องนี้จะถูกแบน พร้อมขอลบข้อความย้อนหลังสูงสุด 7 วัน แล้วปลดแบนทันที\nกลับเข้าเซิร์ฟเวอร์ได้ด้วย invite\nยอดนับเฉพาะ softban ที่เสร็จแล้ว').setImage(gifUrl).toJSON()],
+      .setDescription('ส่งข้อความในห้องนี้จะถูกllบu').setImage(gifUrl).toJSON()],
     components: [new ActionRowBuilder<ButtonBuilder>().addComponents(new ButtonBuilder()
       .setCustomId('softban_count').setLabel(`โดนไปแล้ว ${count} ครั้ง`).setStyle(ButtonStyle.Secondary).setDisabled(true)).toJSON()],
     allowedMentions: { parse: [] },
