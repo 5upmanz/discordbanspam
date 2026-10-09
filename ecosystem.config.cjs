@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'banbot',
+      name: 'Banbot-weaponbet',
       cwd: __dirname,
       script: 'dist/index.js',
       interpreter: '/home/deploy/.nvm/versions/node/v24.21.0/bin/node',

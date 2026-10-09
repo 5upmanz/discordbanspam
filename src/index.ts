@@ -16,7 +16,7 @@ try {
   database = openDatabase(config.databasePath, { guildId: config.guildId, channelId: config.trapChannelId });
   const jobs = createJobs(database);
   const client = createDiscordClient();
-  const statusPanel = createStatusPanel({ store: createStatusStore(database, jobs), publish: createStatusPublisher(client, config.guildId, config.trapChannelId), log });
+  const statusPanel = createStatusPanel({ store: createStatusStore(database, jobs), publish: createStatusPublisher(client, config.guildId, config.trapChannelId, config.statusGifUrl), log });
   app = createApp({ config, client: bindClient(client), api: createDiscordAdapter(client), jobs, clock: { now: Date.now, random: Math.random }, log, statusPanel, closeDatabase: () => database!.close(), exit: code => process.exit(code) });
   const shutdown = () => {
     void app!.stop().then(drained => process.exit(drained ? 0 : 1)).catch(() => {

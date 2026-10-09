@@ -38,7 +38,7 @@ function fakeClient() {
 const message: MessageEnvelope = { id: 'm', guildId: 'g', channelId: 'c', authorId: 'u', webhookId: null, system: false };
 function setup(statusPanel?: StatusPanel) {
   const f = fixture(), client = fakeClient(), close = vi.fn(), exit = vi.fn();
-  const app = createApp({ config: { token: 'test', guildId: 'g', trapChannelId: 'c', databasePath: 'unused', logLevel: 'info' }, client: client.port, api: f.api, jobs: f.jobs, clock: f.clock, log: f.log, closeDatabase: close, exit, statusPanel });
+  const app = createApp({ config: { token: 'test', guildId: 'g', trapChannelId: 'c', statusGifUrl: 'https://example.com/status.gif', databasePath: 'unused', logLevel: 'info' }, client: client.port, api: f.api, jobs: f.jobs, clock: f.clock, log: f.log, closeDatabase: close, exit, statusPanel });
   return { f, client, close, exit, app };
 }
 it('gates pending preflight then processes messages, stops idempotently', async () => {

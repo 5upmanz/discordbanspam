@@ -51,6 +51,14 @@ npm start
 
 Fill `DISCORD_TOKEN`, `GUILD_ID` and `TRAP_CHANNEL_ID`. `DATABASE_PATH` defaults to `./data/jobs.sqlite`; `LOG_LEVEL` defaults to `info` and accepts debug/info/warn/error/critical.
 
+Set `STATUS_GIF_URL` in `.env` to a direct HTTP/HTTPS GIF URL for the trap-channel Embed:
+
+```dotenv
+STATUS_GIF_URL=https://example.com/status.gif
+```
+
+If unset or blank, the original GIF is used. Invalid URLs prevent startup. Restart the bot after changing this value; the existing panel is updated on readiness.
+
 Run from this directory so `.env` and relative paths resolve correctly. `npm start` uses `node --env-file=.env dist/index.js`; it does not build automatically. `npm run dev` builds then starts. Keep `.env`, DB and logs private. The ignore file excludes environment files (except the example), DB sidecars, dependencies and build output.
 
 ## Windows deployment (manual setup only)

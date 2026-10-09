@@ -5,9 +5,9 @@ import { createJobs } from '../src/jobs.js';
 import { fixture } from './helpers.js';
 
 it('renders the requested GIF and a disabled Thai counter without mentions', () => {
-  const payload = statusPayload(12);
+  const payload = statusPayload(12, 'https://example.com/custom.gif');
   expect(payload.embeds[0]).toMatchObject({ title: 'ห้องกับดัก • Softban', description: 'ส่งข้อความในห้องนี้จะถูกllบu' });
-  expect(payload.embeds[0].image?.url).toBe('https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdndubTU3NjhxenZpb3hjbDV3dTY0N3NpMmh6ZDJvZjV0Z2xvY2c3byZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26ufgbn5OaTw6604o/giphy.gif');
+  expect(payload.embeds[0].image?.url).toBe('https://example.com/custom.gif');
   expect(payload.components[0].components[0]).toMatchObject({ label: 'โดนไปแล้ว 12 ครั้ง', disabled: true });
   expect(payload.allowedMentions).toEqual({ parse: [] });
 });

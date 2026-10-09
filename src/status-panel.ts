@@ -3,8 +3,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder
 import type { Jobs, Log } from './contracts.js';
 import { normalizeApiError } from './discord-adapter.js';
 
-const gifUrl = 'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdndubTU3NjhxenZpb3hjbDV3dTY0N3NpMmh6ZDJvZjV0Z2xvY2c3byZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26ufgbn5OaTw6604o/giphy.gif';
-export function statusPayload(count: number) {
+export function statusPayload(count: number, gifUrl: string) {
   return {
     embeds: [new EmbedBuilder().setColor(0xe74c3c).setTitle('ห้องกับดัก • Softban')
       .setDescription('ส่งข้อความในห้องนี้จะถูกllบu').setImage(gifUrl).toJSON()],
@@ -24,11 +23,11 @@ export function createStatusStore(db: Database.Database, jobs: Jobs): StatusStor
     saveMessageId: id => { db.prepare('UPDATE status_panel SET messageId = ? WHERE singleton = 1').run(id); },
   };
 }
-export function createStatusPublisher(client: Client, guildId: string, channelId: string) {
+export function createStatusPublisher(client: Client, guildId: string, channelId: string, gifUrl: string) {
   return async (messageId: string | null, count: number): Promise<string> => {
     const channel = await client.channels.fetch(channelId, { force: true });
     if (!channel || channel.type !== ChannelType.GuildText || channel.guildId !== guildId) throw new Error('Status channel scope mismatch');
-    const payload = statusPayload(count);
+    const payload = statusPayload(count, gifUrl);
     if (messageId) {
       try {
         const message = await channel.messages.fetch({ message: messageId, force: true });

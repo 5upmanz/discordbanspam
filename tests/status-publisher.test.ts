@@ -1,6 +1,7 @@
 import { ChannelType, type Client } from 'discord.js';
 import { expect, it, vi } from 'vitest';
 import { createStatusPublisher } from '../src/status-panel.js';
+import { readConfig } from '../src/config.js';
 
 function fixture() {
   const edit = vi.fn().mockResolvedValue(undefined);
@@ -8,13 +9,16 @@ function fixture() {
   const send = vi.fn().mockResolvedValue({ id: 'new-panel' });
   const channel = { guildId: 'g', type: ChannelType.GuildText, messages: { fetch }, send };
   const client = { user: { id: 'self' }, channels: { fetch: vi.fn().mockResolvedValue(channel) } };
-  return { publish: createStatusPublisher(client as unknown as Client, 'g', 'c'), client, channel, fetch, edit, send };
+  const config = readConfig({ DISCORD_TOKEN: 'test', GUILD_ID: '111111111111111111', TRAP_CHANNEL_ID: '222222222222222222', STATUS_GIF_URL: 'https://example.com/custom.gif' });
+  return { publish: createStatusPublisher(client as unknown as Client, 'g', 'c', config.statusGifUrl), client, channel, fetch, edit, send };
 }
 it('sends the GIF panel with the completed count then edits its stored message', async () => {
   const f = fixture();
   expect(await f.publish(null, 0)).toBe('new-panel');
+  expect(f.send.mock.calls[0][0].embeds[0].image.url).toBe('https://example.com/custom.gif');
   expect(f.send.mock.calls[0][0].components[0].components[0]).toMatchObject({ label: 'โดนไปแล้ว 0 ครั้ง', disabled: true });
   expect(await f.publish('panel', 3)).toBe('panel');
+  expect(f.edit.mock.calls[0][0].embeds[0].image.url).toBe('https://example.com/custom.gif');
   expect(f.fetch).toHaveBeenCalledWith({ message: 'panel', force: true });
   expect(f.edit.mock.calls[0][0].components[0].components[0].label).toBe('โดนไปแล้ว 3 ครั้ง');
   expect(f.send).toHaveBeenCalledOnce();
